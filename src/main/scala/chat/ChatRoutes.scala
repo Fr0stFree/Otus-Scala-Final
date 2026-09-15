@@ -25,7 +25,8 @@ final class ChatRoutes(chatRoom: ChatRoom):
       val onDisconnect = chatRoom.publish(s"*** $user left ***")
       for
         _ <- chatRoom.publish(s"*** $user joined ***")
-        response <- WebSocketBuilder2[IO]
+        webSocketBuilder <- WebSocketBuilder2[IO]
+        response <- webSocketBuilder
           .build(send = chatRoom.frames.onFinalize(onDisconnect), receive = receive(user))
       yield response
 

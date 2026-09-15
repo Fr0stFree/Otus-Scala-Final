@@ -1,6 +1,7 @@
 package chat
 
 import cats.effect.IO
+import fs2.Stream
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration.*
@@ -11,9 +12,10 @@ class ChatRoomSpec extends CatsEffectSuite:
       room <- ChatRoom.create
       received <- room.messages
         .take(1)
-        .concurrently(fs2.Stream.eval(room.publish("hello")))
+        .concurrently(Stream.awakeEvery[IO](50.millis).evalMap(_ => room.publish("hello")))
         .compile
         .lastOrError
+        .timeout(2.seconds)
     yield assertEquals(received, "hello")
 
   test("publish ignores blank messages"):

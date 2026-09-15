@@ -8,7 +8,7 @@ import org.http4s.websocket.WebSocketFrame
 final class ChatRoom private (topic: Topic[IO, String]):
   def publish(message: String): IO[Unit] =
     val normalized = message.trim
-    if normalized.nonEmpty then topic.publish1(normalized) else IO.unit
+    if normalized.nonEmpty then topic.publish1(normalized).void else IO.unit
 
   def messages: Stream[IO, String] =
     topic.subscribe(1000)
