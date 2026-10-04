@@ -20,17 +20,19 @@ object Main extends IOApp:
         IO.println(s"Connection failed: ${error.getMessage}").as(ExitCode.Error)
       }
 
-  private def connect(username: String): IO[Unit] = Console.resource.use { console =>
-    console.printLine(greetingMessage) *> JdkWSClient.simple[IO].use { wsClient =>
-      val uri = serverUri / "ws" / username
-      wsClient.connect(WSRequest(uri)).use { connection =>
-        val renderer = ConsoleEventRenderer(username)
-        val displayEvent =
-          (event: ChatEvent) => renderer.render(event).fold(IO.unit)(console.printLine)
-        ChatClient(connection, displayEvent, console.printLine).run(console.commands)
-          .guarantee(console.printLine("Disconnected."))
-      }
-    }
+  private def connect(username: String): IO[Unit] = (for {
+    console <- Console.resource
+    wsClient <- JdkWSClient.simple[IO]
+    connection <- wsClient.connect(WSRequest(serverUri / "ws" / username))
+  } yield (console, connection)).use { case (console, connection) =>
+    val renderer = ConsoleEventRenderer(username)
+    val onEvent = (event: ChatEvent) => renderer.render(event).fold(IO.unit)(console.printLine)
+
+    for {
+      _ <- console.printLine(greetingMessage)
+      _ <- ChatClient(connection, onEvent, console.printLine).run(console.commands)
+        .guarantee(console.printLine("Disconnected."))
+    } yield ()
   }
 
   private def retrieveUsername(args: List[String]): Option[String] = args match
