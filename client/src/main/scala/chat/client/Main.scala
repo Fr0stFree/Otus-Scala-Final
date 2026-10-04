@@ -14,11 +14,11 @@ object Main extends IOApp:
   private val greetingMessage = "Welcome to Campfire! Type a message and press Enter; /quit exits."
   private val serverUri = Uri.unsafeFromString("ws://127.0.0.1:8080")
 
-  override def run(args: List[String]): IO[ExitCode] = retrieveUsername(args) match
-    case None           => IO.println(errorMessage).as(ExitCode.Error)
-    case Some(username) => connect(username).as(ExitCode.Success).handleErrorWith { error =>
-        IO.println(s"Connection failed: ${error.getMessage}").as(ExitCode.Error)
-      }
+  override def run(args: List[String]): IO[ExitCode] = IO
+    .fromOption(retrieveUsername(args))(new IllegalArgumentException(errorMessage)).flatMap(connect)
+    .as(ExitCode.Success).handleErrorWith { error =>
+      IO.println(s"Connection failed: ${error.getMessage}").as(ExitCode.Error)
+    }
 
   private def connect(username: String): IO[Unit] = (for {
     console <- Console.resource
